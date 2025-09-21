@@ -395,6 +395,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.details.hide()
 
         self.spinner.hide()
+        
+        # Start preloading adjacent folders for better performance
+        QtCore.QTimer.singleShot(100, lambda: self._preload_adjacent_folders(path, dirs + files))
 
     def _on_tile_play(self, folder_path):
         pot = self.settings.get('potplayer_path', '').strip()
@@ -524,3 +527,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.populate_home()
             else:
                 self.populate_path(p)
+    
+    def _preload_adjacent_folders(self, current_path: str, current_files: list):
+        """Preload thumbnails for adjacent folders to improve navigation performance."""
+        try:
+            from core.cache_utils import preload_adjacent_folders
+            # Run in background thread to avoid UI blocking
+            QtCore.QTimer.singleShot(200, lambda: preload_adjacent_folders(current_path, current_files))
+        except Exception:
+            pass  # Don't let preloading errors affect main functionality
