@@ -1,6 +1,8 @@
 from PyQt5 import QtCore
 from pathlib import Path
 import time
+from poster_utils import get_new_poster_path
+import config
 
 class MediaScannerSignals(QtCore.QObject):
     media_scanned = QtCore.pyqtSignal(str, str, bool)
@@ -15,12 +17,10 @@ class MediaScanner(QtCore.QRunnable):
     def run(self):
         start_time = time.time()
         poster = ""
-        # Only check for poster files, do not scan for media files
-        for fn in ("poster.jpg",):  # or add "poster.png", "poster.jpeg" if you want
-            p = Path(self.path) / fn
-            if p.exists() and p.is_file():
-                poster = str(p)
-                break
+        # Use centralized poster lookup from root/posters folder based on folder hash
+        poster_path = get_new_poster_path(self.path, str(config.APP_DIR / 'posters'))
+        if Path(poster_path).exists():
+            poster = poster_path
 
         # We don't check for media files anymore, so just set has_media = False (or True if you want)
         has_media = False
