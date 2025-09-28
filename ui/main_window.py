@@ -37,6 +37,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings = load_json(config.SETTINGS_FILE, config.DEFAULT_SETTINGS)
         self.quick = load_json(config.QUICK_FILE, [])
         self.threadpool = QtCore.QThreadPool.globalInstance()
+        self.threadpool.setMaxThreadCount(16)
+        print(f"[TIMING] Thumbnail thread pool max thread count set to {self.threadpool.maxThreadCount()}")
         self.history = []
         self.history_index = -1
         self.current_path = ''

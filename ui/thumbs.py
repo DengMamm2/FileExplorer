@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from core import cache_utils
 import traceback
+import time
 
 class ThumbSignals(QtCore.QObject):
     finished = QtCore.pyqtSignal(str, QtGui.QImage)
@@ -19,29 +20,18 @@ class ThumbJob(QtCore.QRunnable):
 
     @QtCore.pyqtSlot()
     def run(self):
+        start_time = time.time()
         try:
-            cp = cache_utils.cache_path_for(self.path, self.target_w, self.target_h)
-            if cp.exists():
-                img = QtGui.QImage(str(cp))
-                if not img.isNull():
-                    self.signals.finished.emit(self.path, img)
-                    return
+            print(f"[TIMING] {self.path} - ThumbJob.run started at {start_time:.3f}")
             img = QtGui.QImage(self.path)
             if img.isNull():
+                print(f"[TIMING] {self.path} - Failed to load image in {time.time()-start_time:.3f} sec")
                 self.signals.finished.emit(self.path, QtGui.QImage())
+                print(f"[TIMING] {self.path} - ThumbJob.run finished (fail) in {time.time()-start_time:.3f} sec")
                 return
-            sw, sh = img.width(), img.height()
-            if sw > self.target_w or sh > self.target_h:
-                scaled = img.scaled(self.target_w, self.target_h, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
-            else:
-                scaled = img
-            try:
-                tmp = cp.with_suffix('.tmp')
-                scaled.save(str(tmp), 'JPEG', 85)
-                tmp.replace(cp)
-            except Exception:
-                pass
-            self.signals.finished.emit(self.path, scaled)
+            print(f"[TIMING] {self.path} - Loaded original image in {time.time()-start_time:.3f} sec")
+            self.signals.finished.emit(self.path, img)
+            print(f"[TIMING] {self.path} - ThumbJob.run finished (no resize, no cache) in {time.time()-start_time:.3f} sec")
         except Exception:
             try:
                 self.signals.finished.emit(self.path, QtGui.QImage())
@@ -53,6 +43,7 @@ class ThumbnailLoader(QtCore.QObject):
     def __init__(self):
         super().__init__()
         self.pool = QtCore.QThreadPool.globalInstance()
+        QtCore.QThreadPool.globalInstance().setMaxThreadCount(16)
         self.pending = {}
 
     @classmethod
@@ -72,6 +63,7 @@ class ThumbnailLoader(QtCore.QObject):
         self.pending[path] = [cb]
         job = ThumbJob(path, target_w, target_h)
         job.signals.finished.connect(self._on_finished)
+        print(f"[TIMING] Queuing thumbnail job for {path} at {time.time():.3f}")
         self.pool.start(job)
 
     def _on_finished(self, path: str, qimg: QtGui.QImage):
@@ -81,4 +73,3 @@ class ThumbnailLoader(QtCore.QObject):
                 cb(path, qimg)
             except Exception:
                 pass
-

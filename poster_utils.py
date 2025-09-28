@@ -1,0 +1,23 @@
+import os
+import hashlib
+import shutil
+
+def get_folder_hash(folder_path):
+    # Create a SHA1 hash of the folder path
+    return hashlib.sha1(folder_path.encode('utf-8')).hexdigest()
+
+def get_new_poster_path(folder_path, posters_root="posters"):
+    h = get_folder_hash(folder_path)
+    subfolder_2 = h[:2]
+    subfolder_3 = h[:5]
+    poster_dir = os.path.join(posters_root, subfolder_2, subfolder_3)
+    os.makedirs(poster_dir, exist_ok=True)
+    return os.path.join(poster_dir, f"{h}.jpg")
+
+def move_poster(folder_path, posters_root="posters"):
+    src = os.path.join(folder_path, "poster.jpg")
+    if os.path.exists(src):
+        dest = get_new_poster_path(folder_path, posters_root)
+        shutil.move(src, dest)
+        return dest
+    return None

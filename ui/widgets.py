@@ -5,7 +5,7 @@ class Spinner(QtWidgets.QLabel):
         super().__init__(parent)
         self.setFixedSize(size, size)
         self.setAlignment(QtCore.Qt.AlignCenter)
-        movie = QtGui.QMovie("assets/spinner.gif", QtCore.QByteArray(), self)
+        movie = QtGui.QMovie("spinner.gif", QtCore.QByteArray(), self)
         movie.setScaledSize(QtCore.QSize(size, size))
         self.setMovie(movie)
         movie.start()

@@ -118,10 +118,9 @@ class Tile(QtWidgets.QFrame):
 
         # schedule thumbnail load (images) OR defer folder scan to event loop
         if self.is_file and utils.is_image_file(self.path):
-          ThumbnailLoader.instance().load(
-              self.path, self.native_w, self.native_h, self._on_thumb_ready
-          )
-
+            ThumbnailLoader.instance().load(
+                self.path, self.native_w, self.native_h, self._on_thumb_ready
+            )
         elif not self.is_file:
             # DEFER the scan until after constructor returns to avoid UI freeze
             QtCore.QTimer.singleShot(0, self._start_media_scan)
@@ -215,11 +214,11 @@ class Tile(QtWidgets.QFrame):
             self._media_scan_done = True
             self.has_media = bool(has_media)
 
-            #if poster found, load it (once)
+            # if poster found, load it (once)
             if poster and not self.poster_loaded:
-              self.poster_loaded = True
-              self.poster_path = poster
-              ThumbnailLoader.instance().load(poster, self.native_w, self.native_h, self._on_thumb_ready)
+                self.poster_loaded = True
+                self.poster_path = poster
+                ThumbnailLoader.instance().load(poster, self.native_w, self.native_h, self._on_thumb_ready)
 
             # update overlay visibility: only show if mouse is over this tile
             if self.play_overlay:

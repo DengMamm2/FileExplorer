@@ -1,7 +1,6 @@
-# workers/media_scanner.py
 from PyQt5 import QtCore
 from pathlib import Path
-import os, traceback
+import time
 
 class MediaScannerSignals(QtCore.QObject):
     media_scanned = QtCore.pyqtSignal(str, str, bool)
@@ -14,39 +13,20 @@ class MediaScanner(QtCore.QRunnable):
 
     @QtCore.pyqtSlot()
     def run(self):
-        log = []
+        start_time = time.time()
         poster = ""
+        # Only check for poster files, do not scan for media files
+        for fn in ("poster.jpg",):  # or add "poster.png", "poster.jpeg" if you want
+            p = Path(self.path) / fn
+            if p.exists() and p.is_file():
+                poster = str(p)
+                break
+
+        # We don't check for media files anymore, so just set has_media = False (or True if you want)
         has_media = False
-        try:
-            log.append(f"[MediaScanner] START scanning: {self.path}")
-            for fn in ("poster.png", "poster.jpg", "poster.jpeg"):
-                p = Path(self.path) / fn
-                if p.exists() and p.is_file():
-                    poster = str(p)
-                    break
 
-            try:
-                with os.scandir(self.path) as it:
-                    for e in it:
-                        if e.is_file() and any(e.name.lower().endswith(ext) for ext in ('.mp4','.mkv','.avi','.mov','.wmv','.flv','.m4v','.webm')):
-                            has_media = True
-                            break
-            except Exception as scandir_exc:
-                log.append(f"[MediaScanner] scandir failed: {scandir_exc}")
+        # Emit the result
+        self.signals.media_scanned.emit(self.path, poster or "", has_media)
 
-        except Exception:
-            log.append(traceback.format_exc())
-        finally:
-            try:
-                self.signals.media_scanned.emit(self.path, poster or "", has_media)
-                log.append(f"[MediaScanner] emitted for {self.path}")
-            except Exception:
-                log.append(traceback.format_exc())
-            try:
-                with open("scanner_debug.log", "a", encoding="utf-8") as fh:
-                    for L in log:
-                        fh.write(L + "\n")
-                    fh.write("\n")
-            except Exception:
-                pass
-
+        # Optional: print timing info
+        print(f"[TIMING] Checked for poster in {self.path} in {time.time()-start_time:.3f} sec")
