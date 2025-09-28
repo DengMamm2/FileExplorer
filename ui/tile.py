@@ -118,8 +118,9 @@ class Tile(QtWidgets.QFrame):
 
         # schedule thumbnail load (images) OR defer folder scan to event loop
         if self.is_file and utils.is_image_file(self.path):
+          # Use high priority for image files (they're likely visible)
           ThumbnailLoader.instance().load(
-              self.path, self.native_w, self.native_h, self._on_thumb_ready
+              self.path, self.native_w, self.native_h, self._on_thumb_ready, priority=10
           )
 
         elif not self.is_file:
@@ -196,14 +197,21 @@ class Tile(QtWidgets.QFrame):
         try:
             if getattr(self, "_scanner_job", None) is not None:
                 return
-            scanner = MediaScanner(self.path)
-            # keep reference to avoid GC
-            self._scanner_job = scanner
-            scanner.signals.media_scanned.connect(self._on_media_scanned, QtCore.Qt.QueuedConnection)
-            QtCore.QThreadPool.globalInstance().start(scanner)
+            
+            # Use optimized MediaScannerManager for better performance
+            from workers.media_scanner import MediaScannerManager
+            manager = MediaScannerManager.instance()
+            manager.scan_folder(self.path, self._on_media_scanned, priority=True)
+            
         except Exception:
-            # do not raise — keep UI alive
-            traceback.print_exc()
+            # Fallback to original scanner if manager fails
+            try:
+                scanner = MediaScanner(self.path, priority=True)
+                self._scanner_job = scanner
+                scanner.signals.media_scanned.connect(self._on_media_scanned, QtCore.Qt.QueuedConnection)
+                QtCore.QThreadPool.globalInstance().start(scanner)
+            except Exception:
+                traceback.print_exc()
 
     def _on_media_scanned(self, path: str, poster: str, has_media: bool):
         """Apply results received from the MediaScanner worker."""
@@ -215,11 +223,12 @@ class Tile(QtWidgets.QFrame):
             self._media_scan_done = True
             self.has_media = bool(has_media)
 
-            #if poster found, load it (once)
+            #if poster found, load it (once) with high priority for visible tiles
             if poster and not self.poster_loaded:
               self.poster_loaded = True
               self.poster_path = poster
-              ThumbnailLoader.instance().load(poster, self.native_w, self.native_h, self._on_thumb_ready)
+              # Use high priority for poster thumbnails as they're likely visible
+              ThumbnailLoader.instance().load(poster, self.native_w, self.native_h, self._on_thumb_ready, priority=8)
 
             # update overlay visibility: only show if mouse is over this tile
             if self.play_overlay:
