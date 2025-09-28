@@ -15,16 +15,20 @@ class MediaInfo:
 
     def _detect(self):
         try:
-            if self.is_file and is_image_file(self.path):
-                self.poster = str(self.path)
-                return
-
+            # Always use only the central posters folder for folder posters
             if not self.is_file:
-                for fn in ("poster.png", "poster.jpg", "poster.jpeg"):
-                    p = self.path / fn
-                    if p.exists():
-                        self.poster = str(p)
-                        break
+                from poster_utils import get_new_poster_path
+                import config
+                poster_path = get_new_poster_path(str(self.path), str(config.APP_DIR / 'posters'))
+                from pathlib import Path
+                if Path(poster_path).exists():
+                    self.poster = poster_path
+                else:
+                    self.poster = None  # No poster available
+
+            else:
+                # For files, never use any image as a poster
+                self.poster = None
 
             dpl = self.path / "playlist.dpl"
             if dpl.exists():

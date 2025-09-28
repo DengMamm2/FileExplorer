@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from functools import partial
 from PyQt5 import QtCore, QtGui, QtWidgets
+from poster_utils import move_poster
 
 import config
 from core.jsonio import load_json, save_json  # small helper below
@@ -114,6 +115,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.quick_btn = QtWidgets.QToolButton()
         self.quick_btn.setText('Quick ▾')
         self.quick_btn.setMinimumSize(140, 40)
+        self.collect_posters_btn = QtWidgets.QPushButton('Collect posters')
+        self.collect_posters_btn.setMinimumSize(140, 40)
+        self.collect_posters_btn.setStyleSheet('color:#7FC97F; font-weight:700;')
+        self.collect_posters_btn.clicked.connect(self.collect_posters_from_quick)
         qfont = QtGui.QFont()
         qfont.setPointSize(14)
         self.quick_btn.setFont(qfont)
@@ -124,6 +129,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # add left + right widgets into row 0 of grid
         top_layout.addWidget(left_w, 0, 0, alignment=QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        top_layout.addWidget(self.collect_posters_btn, 0, 1, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         top_layout.addWidget(self.quick_btn, 0, 2, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         top_layout.setColumnMinimumWidth(2, 40)
         self.quick_btn.setStyleSheet("margin-right: 60px;")
@@ -526,3 +532,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.populate_home()
             else:
                 self.populate_path(p)
+
+    def collect_posters_from_quick(self):
+        from poster_utils import move_poster
+        import config
+        posters_root = str(config.APP_DIR / 'posters')
+        for folder_path in self.quick:
+            try:
+                result = move_poster(folder_path, posters_root)
+                if result:
+                    print(f"Moved poster for {folder_path} to {result}")
+            except Exception as e:
+                print(f"Error moving poster for {folder_path}: {e}")
+        QtWidgets.QMessageBox.information(self, "Posters Collected", "Finished moving posters for all Quick folders.")
