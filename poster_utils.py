@@ -18,6 +18,13 @@ def move_poster(folder_path, posters_root="posters"):
     src = os.path.join(folder_path, "poster.jpg")
     if os.path.exists(src):
         dest = get_new_poster_path(folder_path, posters_root)
-        shutil.move(src, dest)
+        
+        # Make sure the destination directory exists (redundant but safe)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        
+        # Copy first, then delete original to prevent data loss
+        shutil.copy2(src, dest)
+        os.remove(src)
+        
         return dest
     return None

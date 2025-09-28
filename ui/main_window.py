@@ -534,14 +534,40 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.populate_path(p)
 
     def collect_posters_from_quick(self):
-        from poster_utils import move_poster
+        from poster_utils import move_poster, get_new_poster_path
         import config
+        import os
+        from pathlib import Path
+    
         posters_root = str(config.APP_DIR / 'posters')
-        for folder_path in self.quick:
+        moved_count = 0
+    
+        def process_folder(folder_path):
+            nonlocal moved_count
+            # Try to move a poster from the current folder
             try:
                 result = move_poster(folder_path, posters_root)
                 if result:
                     print(f"Moved poster for {folder_path} to {result}")
+                    moved_count += 1
             except Exception as e:
                 print(f"Error moving poster for {folder_path}: {e}")
-        QtWidgets.QMessageBox.information(self, "Posters Collected", "Finished moving posters for all Quick folders.")
+        
+            # Recursively process all subfolders
+            try:
+                with os.scandir(folder_path) as it:
+                    for entry in it:
+                        if entry.is_dir():
+                            process_folder(entry.path)
+            except Exception as e:
+                print(f"Error scanning subfolders of {folder_path}: {e}")
+    
+        # Process each quick access folder
+        for folder_path in self.quick:
+            process_folder(folder_path)
+    
+        QtWidgets.QMessageBox.information(
+            self, 
+            "Posters Collected", 
+            f"Finished moving {moved_count} posters from all Quick folders and their subfolders."
+        )
