@@ -72,14 +72,14 @@ class Tile(QtWidgets.QFrame):
         self.img_lbl.setScaledContents(False)
 
         # Meta area (unchanged visual)
-        meta_widget = QtWidgets.QWidget(self)
+        meta_widget = QtWidgets.QWidget()
         mv = QtWidgets.QVBoxLayout(meta_widget)
         mv.setContentsMargins(4, 0, 4, 0)
         mv.setSpacing(2)
         self.meta_line = QtWidgets.QLabel("")
         meta_font_px = max(10, int(13 * self.font_scale))
         self.meta_line.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
-        title_pt = max(10, int(12 * self.font_scale))
+        title_pt = max(10, int(10 * self.font_scale))
         self.title_btn = LinkButton("", parent=meta_widget, pt=title_pt)
         self.title_btn.clicked.connect(lambda: self.clicked_open.emit(self.path))
         mv.addWidget(self.meta_line)
@@ -89,12 +89,35 @@ class Tile(QtWidgets.QFrame):
         # Name parsing (keeps title/metadata behavior exactly)
         nm = Path(self.path).name
         parts = [p.strip() for p in nm.rsplit(" - ", 2)]
+
+        def wrap_text(text, max_chars=18):
+            # Adds a line break every max_chars characters, at the nearest space if possible
+            if len(text) <= max_chars:
+                return text
+            words = text.split(' ')
+            lines = []
+            line = ""
+            for word in words:
+                if len(line) + len(word) + 1 <= max_chars:
+                    if line:
+                        line += " "
+                    line += word
+                else:
+                    if line:
+                        lines.append(line)
+                    line = word
+            if line:
+                lines.append(line)
+            return '\n'.join(lines)
+
         if len(parts) == 3:
             self.meta_line.setText(f"{parts[1]} - ★{parts[2]}")
-            self.title_btn.setText(parts[0])
+            self.title_btn.setText(wrap_text(parts[0]))
         else:
             self.meta_line.setText("")
-            self.title_btn.setText(nm)
+            self.title_btn.setText(wrap_text(nm))
+
+
 
         # Default SVG or fallback background (same as before)
         try:

@@ -185,6 +185,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.scroll = QtWidgets.QScrollArea()
         self.scroll.setWidgetResizable(True)
+        # Make scrolling faster
+        self.scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.scroll.verticalScrollBar().setSingleStep(40)  # Increase from default (usually around 20)
 
         # wrapper to center the grid_container
         self.scroll_wrapper = QtWidgets.QWidget()
@@ -347,6 +350,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.item_count_label.setText(f"Items: {len(self.quick)}")
 
     def populate_path(self, path):
+        path = str(path).replace('\\', '/')  # Normalize path to use forward slashes
         """
         Populate directories + files using the same tile display size and ALWAYS 8 columns.
         """
@@ -466,7 +470,7 @@ class MainWindow(QtWidgets.QMainWindow):
             elided = metrics.elidedText(p, QtCore.Qt.ElideRight, max_seg_w)
             btn.setText(elided)
             btn.setToolTip(p)
-            btn.clicked.connect(partial(self.populate_path, str(accum)))
+            btn.clicked.connect(partial(self.populate_path, str(accum).replace('\\', '/')))
             self.breadcrumb_layout.addWidget(btn)
 
     def on_search(self, text):
