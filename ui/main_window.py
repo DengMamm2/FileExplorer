@@ -119,9 +119,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.collect_posters_btn.setMinimumSize(140, 40)
         self.collect_posters_btn.setStyleSheet('color:#7FC97F; font-weight:700;')
         self.collect_posters_btn.clicked.connect(self.collect_posters_from_quick)
+        self.item_count_label = QtWidgets.QLabel("Items: 0")
+        self.item_count_label.setStyleSheet('color:#FFC857; font-weight:700; font-size:14px; margin-right:16px;')
         qfont = QtGui.QFont()
         qfont.setPointSize(14)
         self.quick_btn.setFont(qfont)
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(100)  # Will update this later
+        self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(False)  # Hide it until needed
         self.quick_menu = QtWidgets.QMenu()
         self.quick_btn.setMenu(self.quick_menu)
         self.quick_btn.setPopupMode(QtWidgets.QToolButton.InstantPopup)
@@ -129,8 +136,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # add left + right widgets into row 0 of grid
         top_layout.addWidget(left_w, 0, 0, alignment=QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        top_layout.addWidget(self.collect_posters_btn, 0, 1, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        top_layout.addWidget(self.quick_btn, 0, 2, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        top_layout.addWidget(self.item_count_label, 0, 1, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        top_layout.addWidget(self.collect_posters_btn, 0, 2, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        top_layout.addWidget(self.quick_btn, 0, 3, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        top_layout.addWidget(self.progress_bar, 0, 4, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         top_layout.setColumnMinimumWidth(2, 40)
         self.quick_btn.setStyleSheet("margin-right: 60px;")
 
@@ -304,6 +313,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 w.deleteLater()
 
     def populate_home(self):
+        print("POPULATE_PATH:", Path)
         """
         Populate quick-access tiles using precomputed tile display size and ALWAYS 8 columns.
         Tile sizes were computed once at startup (self.tile_w / self.tile_h). Window resize
@@ -334,6 +344,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.history.append('[HOME]')
             self.history_index = len(self.history) - 1
         self._update_breadcrumb([])
+        self.item_count_label.setText(f"Items: {len(self.quick)}")
 
     def populate_path(self, path):
         """
@@ -357,6 +368,9 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception:
             dirs = []
             files = []
+        total_items = len(dirs) + len(files)
+        self.item_count_label.setText(f"Items: {total_items}")
+
 
         r = c = 0
         for d in dirs:
@@ -506,6 +520,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 if c >= cols:
                     c = 0
                     r += 1
+            try:
+                # Try to count the results in the grid
+                count = self.grid_layout.count()
+                self.item_count_label.setText(f"Items: {count}")
+            except Exception:
+                pass
 
     def resizeEvent(self, ev):
         # Intentionally do nothing to tile sizes on window resize:
@@ -538,13 +558,34 @@ class MainWindow(QtWidgets.QMainWindow):
         import config
         import os
         from pathlib import Path
-    
+
         posters_root = str(config.APP_DIR / 'posters')
         moved_count = 0
-    
+
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+
+        # --- Step 1: Find all folders to process ---
+        folders_to_process = []
+
+        def gather_folders(folder_path):
+            folders_to_process.append(folder_path)
+            try:
+                with os.scandir(folder_path) as it:
+                    for entry in it:
+                        if entry.is_dir():
+                            gather_folders(entry.path)
+            except Exception:
+                pass
+
+        for folder_path in self.quick:
+            gather_folders(folder_path)
+
+        self.progress_bar.setMaximum(len(folders_to_process))
+
+        # --- Step 2: Process each folder and update progress ---
         def process_folder(folder_path):
             nonlocal moved_count
-            # Try to move a poster from the current folder
             try:
                 result = move_poster(folder_path, posters_root)
                 if result:
@@ -552,22 +593,15 @@ class MainWindow(QtWidgets.QMainWindow):
                     moved_count += 1
             except Exception as e:
                 print(f"Error moving poster for {folder_path}: {e}")
-        
-            # Recursively process all subfolders
-            try:
-                with os.scandir(folder_path) as it:
-                    for entry in it:
-                        if entry.is_dir():
-                            process_folder(entry.path)
-            except Exception as e:
-                print(f"Error scanning subfolders of {folder_path}: {e}")
-    
-        # Process each quick access folder
-        for folder_path in self.quick:
+
+        for idx, folder_path in enumerate(folders_to_process):
             process_folder(folder_path)
-    
+            self.progress_bar.setValue(idx + 1)
+            QtWidgets.QApplication.processEvents()  # This keeps the UI responsive
+
         QtWidgets.QMessageBox.information(
             self, 
             "Posters Collected", 
             f"Finished moving {moved_count} posters from all Quick folders and their subfolders."
         )
+        self.progress_bar.setVisible(False)
