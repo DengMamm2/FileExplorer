@@ -1,13 +1,11 @@
 # ui/tile.py
+from PyQt5 import QtCore, QtGui, QtWidgets
+from typing import Optional
+from pathlib import Path
 import os
 import traceback
-from pathlib import Path
-from typing import Optional
-
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 import utils
-import config
 from ui.widgets import LinkButton
 from ui.thumbs import ThumbnailLoader
 from workers.media_scanner import MediaScanner
@@ -44,68 +42,58 @@ class Tile(QtWidgets.QFrame):
         self._scanner_job = None
         self._media_scan_done = False
 
-        # NEW APPROACH: Use absolute positioning to guarantee no overlap
-        text_area_height = 80  # Fixed reserved space for text
-        outer_margin = 12
-        
-        # Total tile size includes poster + guaranteed text space
-        total_width = self.visible_w + outer_margin
-        total_height = self.visible_h + text_area_height + outer_margin
-        self.setFixedSize(total_width, total_height)
+        # layout sizing (same approach as original)
+        outer_margin_lr = 12
+        visible_meta_h = max(40, int(getattr(utils, "META_H", 120)))
+        self.setFixedSize(self.visible_w + outer_margin_lr, self.visible_h + visible_meta_h)
         self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
 
-        # POSTER AREA: Positioned at the top with exact coordinates
-        self.holder = QtWidgets.QFrame(self)
-        poster_x = (total_width - self.visible_w) // 2  # Center horizontally
-        poster_y = 6  # Top margin
-        self.holder.setGeometry(poster_x, poster_y, self.visible_w, self.visible_h)
-        self.holder.setStyleSheet("background:#151515; border-radius:10px;")
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.setContentsMargins(6, 6, 6, 6)
+        outer.setSpacing(6)
 
-        # Shadow for poster (unchanged)
+        # Poster holder
+        self.holder = QtWidgets.QFrame(self)
+        self.holder.setFixedSize(self.visible_w, self.visible_h)
+        self.holder.setStyleSheet("background:#151515; border-radius:10px;")
+        outer.addWidget(self.holder, alignment=QtCore.Qt.AlignHCenter)
+
         sh = QtWidgets.QGraphicsDropShadowEffect(self.holder)
         sh.setBlurRadius(18)
         sh.setOffset(0, 6)
         sh.setColor(QtGui.QColor(0, 0, 0, 200))
         self.holder.setGraphicsEffect(sh)
 
-        # Poster image label (unchanged)
+        # Poster image
         self.img_lbl = QtWidgets.QLabel(self.holder)
         self.img_lbl.setGeometry(0, 0, self.visible_w, self.visible_h)
         self.img_lbl.setAlignment(QtCore.Qt.AlignCenter)
         self.img_lbl.setStyleSheet("border-radius:10px;")
         self.img_lbl.setScaledContents(False)
 
-        # TEXT AREA: Positioned BELOW poster with exact coordinates  
-        text_x = 6
-        text_y = poster_y + self.visible_h + 10  # 10 pixels below poster
-        text_width = total_width - 12  # Full width minus margins
-        
-        # Create text container at exact position
-        self.text_container = QtWidgets.QWidget(self)
-        self.text_container.setGeometry(text_x, text_y, text_width, text_area_height)
-        
-        # Text layout within the container
-        text_layout = QtWidgets.QVBoxLayout(self.text_container)
-        text_layout.setContentsMargins(4, 0, 4, 0)
-        text_layout.setSpacing(2)
-        
-        # Meta line and title (unchanged styling)
+        # Meta area (for folder name)
+        meta_widget = QtWidgets.QWidget()
+        mv = QtWidgets.QVBoxLayout(meta_widget)
+        mv.setContentsMargins(4, 0, 4, 0)
+        mv.setSpacing(2)
         self.meta_line = QtWidgets.QLabel("")
+        self.meta_line.setAlignment(QtCore.Qt.AlignCenter)
+        self.meta_line.setWordWrap(True)
         meta_font_px = max(10, int(13 * self.font_scale))
         self.meta_line.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
-        
         title_pt = max(10, int(10 * self.font_scale))
-        self.title_btn = LinkButton("", parent=self.text_container, pt=title_pt)
+        self.title_btn = LinkButton("", parent=meta_widget, pt=title_pt)
         self.title_btn.clicked.connect(lambda: self.clicked_open.emit(self.path))
-        
-        text_layout.addWidget(self.meta_line)
-        text_layout.addWidget(self.title_btn)
+        mv.addWidget(self.meta_line)
+        mv.addWidget(self.title_btn)
+        outer.addWidget(meta_widget, alignment=QtCore.Qt.AlignHCenter)
 
-        # Name parsing (unchanged)
+        # Name parsing (keeps title/metadata behavior exactly)
         nm = Path(self.path).name
         parts = [p.strip() for p in nm.rsplit(" - ", 2)]
 
         def wrap_text(text, max_chars=18):
+            # Adds a line break every max_chars characters, at the nearest space if possible
             if len(text) <= max_chars:
                 return text
             words = text.split(' ')
@@ -131,7 +119,9 @@ class Tile(QtWidgets.QFrame):
             self.meta_line.setText("")
             self.title_btn.setText(wrap_text(nm))
 
-        # Default SVG or fallback background (unchanged)
+
+
+        # Default SVG or fallback background (same as before)
         try:
             svgpm = utils.svg_to_pixmap(utils.FOLDER_SVG, max(self.visible_w, self.visible_h))
             if not svgpm.isNull():
@@ -151,15 +141,16 @@ class Tile(QtWidgets.QFrame):
             fb.fill(QtGui.QColor("#2b2b2b"))
             self.img_lbl.setPixmap(fb)
 
-        # Schedule thumbnail load (unchanged)
+        # schedule thumbnail load (images) OR defer folder scan to event loop
         if self.is_file and utils.is_image_file(self.path):
             ThumbnailLoader.instance().load(
                 self.path, self.native_w, self.native_h, self._on_thumb_ready
             )
         elif not self.is_file:
+            # DEFER the scan until after constructor returns to avoid UI freeze
             QtCore.QTimer.singleShot(0, self._start_media_scan)
 
-        # Build play icon pixmap (unchanged)
+        # Build play icon pixmap (unchanged drawing)
         self.play_overlay = None
         try:
             play_pm = self._build_play_pixmap()
@@ -170,10 +161,17 @@ class Tile(QtWidgets.QFrame):
                 self.play_overlay.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
                 self.play_overlay.setStyleSheet("background: transparent;")
                 self.play_overlay.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+                # center it
                 x = (self.visible_w - play_pm.width()) // 2
                 y = (self.visible_h - play_pm.height()) // 2
                 self.play_overlay.move(max(0, x), max(0, y))
-                self.play_overlay.hide()
+
+                # ensure hidden at startup (this prevents the "visible by default" bug)
+                try:
+                    self.play_overlay.hide()
+                    self.play_overlay.setVisible(False)
+                except Exception:
+                    pass
 
                 def _on_play(ev):
                     if self.has_media:
@@ -183,10 +181,10 @@ class Tile(QtWidgets.QFrame):
         except Exception:
             self.play_overlay = None
 
-        # Clicking the poster opens (unchanged)
+        # clicking the poster opens
         self.img_lbl.mouseReleaseEvent = lambda ev: self.clicked_open.emit(self.path)
 
-        # Shine overlay (unchanged)
+        # shine overlay (diagonal) + animations (inline, kept as earlier)
         self.shine_overlay = QtWidgets.QFrame(self.holder)
         self.shine_overlay.setStyleSheet(
             """background: qlineargradient(
@@ -197,11 +195,11 @@ class Tile(QtWidgets.QFrame):
             );
             border-radius:10px;"""
         )
+        # oversize so diagonal pass fully covers
         self.shine_overlay.setGeometry(-self.visible_w, -self.visible_h,
                                        self.visible_w * 2, self.visible_h * 2)
         self.shine_overlay.hide()
 
-        # Animations (unchanged)
         self._shine_anim = QtCore.QPropertyAnimation(self.shine_overlay, b"pos", self)
         self._shine_anim.setDuration(200)
         self._shine_anim.setStartValue(QtCore.QPoint(self.visible_w, -self.visible_h))
@@ -209,23 +207,26 @@ class Tile(QtWidgets.QFrame):
         self._shine_anim.setLoopCount(1)
         self._shine_anim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
 
+        # pop-out animation
         self._hover_anim = QtCore.QPropertyAnimation(self.holder, b"geometry", self)
         self._hover_anim.setDuration(150)
         self._hover_anim.setEasingCurve(QtCore.QEasingCurve.InOutQuad)
 
         self.setAttribute(QtCore.Qt.WA_Hover, True)
 
-    # ALL METHODS BELOW ARE UNCHANGED
+    # --- Media scan (async) ---
     def _start_media_scan(self):
         """Start a MediaScanner QRunnable (kept as worker in workers/media_scanner.py)."""
         try:
             if getattr(self, "_scanner_job", None) is not None:
                 return
             scanner = MediaScanner(self.path)
+            # keep reference to avoid GC
             self._scanner_job = scanner
             scanner.signals.media_scanned.connect(self._on_media_scanned, QtCore.Qt.QueuedConnection)
             QtCore.QThreadPool.globalInstance().start(scanner)
         except Exception:
+            # do not raise — keep UI alive
             traceback.print_exc()
 
     def _on_media_scanned(self, path: str, poster: str, has_media: bool):
@@ -234,14 +235,17 @@ class Tile(QtWidgets.QFrame):
             if path != self.path:
                 return
 
+            # mark done
             self._media_scan_done = True
             self.has_media = bool(has_media)
 
+            # if poster found, load it (once)
             if poster and not self.poster_loaded:
                 self.poster_loaded = True
                 self.poster_path = poster
                 ThumbnailLoader.instance().load(poster, self.native_w, self.native_h, self._on_thumb_ready)
 
+            # update overlay visibility: only show if mouse is over this tile
             if self.play_overlay:
                 try:
                     if self.has_media and self.underMouse():
@@ -255,6 +259,7 @@ class Tile(QtWidgets.QFrame):
                     except Exception:
                         pass
 
+            # force repaint so state is visible immediately
             try:
                 self.update()
                 if self.play_overlay:
@@ -265,6 +270,7 @@ class Tile(QtWidgets.QFrame):
         except Exception:
             traceback.print_exc()
 
+    # --- Thumbnail callback ---
     def _on_thumb_ready(self, path: str, qimg: Optional[QtGui.QImage]):
         try:
             cached = utils.cache_get(path, self.visible_w, self.visible_h)
@@ -281,6 +287,7 @@ class Tile(QtWidgets.QFrame):
         except Exception:
             traceback.print_exc()
 
+    # --- Play icon builder (unchanged) ---
     def _build_play_pixmap(self) -> Optional[QtGui.QPixmap]:
         try:
             size = 96
@@ -311,16 +318,19 @@ class Tile(QtWidgets.QFrame):
         except Exception:
             return None
 
+    # --- Hover effects ---
     def enterEvent(self, ev):
         super().enterEvent(ev)
         if self.has_media and self.play_overlay:
             self.play_overlay.show()
             self.play_overlay.raise_()
 
+        # shine
         self.shine_overlay.show()
         self._shine_anim.stop()
         self._shine_anim.start()
 
+        # pop-out
         self._hover_anim.stop()
         rect = self.holder.geometry()
         bigger = QtCore.QRect(
@@ -339,8 +349,7 @@ class Tile(QtWidgets.QFrame):
             self.play_overlay.hide()
         self.shine_overlay.hide()
 
+        # shrink back
         self._hover_anim.stop()
-        self._hover_anim.setEndValue(QtCore.QRect(
-            (self.width() - self.visible_w) // 2, 6, self.visible_w, self.visible_h
-        ))
+        self._hover_anim.setEndValue(QtCore.QRect(0, 0, self.visible_w, self.visible_h))
         self._hover_anim.start()
