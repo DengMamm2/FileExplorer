@@ -44,13 +44,61 @@ class Tile(QtWidgets.QFrame):
         self._scanner_job = None
         self._media_scan_done = False
 
-        # NEW APPROACH: Use absolute positioning to guarantee no overlap
-        text_area_height = 80  # Fixed reserved space for text
+        # COMPLETELY DYNAMIC APPROACH: NO HEIGHT RESTRICTIONS WHATSOEVER
         outer_margin = 12
-        
-        # Total tile size includes poster + guaranteed text space
+    
+        # Start with just the poster size - we'll expand as needed
         total_width = self.visible_w + outer_margin
-        total_height = self.visible_h + text_area_height + outer_margin
+    
+        # Create a temporary widget to measure text size
+        temp_widget = QtWidgets.QWidget()
+        temp_layout = QtWidgets.QVBoxLayout(temp_widget)
+        temp_layout.setContentsMargins(4, 0, 4, 0)
+        temp_layout.setSpacing(2)
+    
+        # Parse folder name to determine what text we'll display
+        nm = Path(self.path).name
+        parts = [p.strip() for p in nm.rsplit(" - ", 2)]
+    
+        # Create temporary labels to measure text size
+        meta_font_px = max(10, int(13 * self.font_scale))
+        temp_meta = QtWidgets.QLabel("")
+        temp_meta.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
+        temp_meta.setAlignment(QtCore.Qt.AlignCenter)
+    
+        title_pt = max(10, int(10 * self.font_scale))
+        temp_title = QtWidgets.QLabel("")
+        temp_title.setWordWrap(True)
+        temp_title.setAlignment(QtCore.Qt.AlignCenter)
+        title_font = temp_title.font()
+        title_font.setPointSize(int(title_pt))
+        title_font.setBold(True)
+        temp_title.setFont(title_font)
+    
+        # Set the actual text content
+        if len(parts) == 3:
+            temp_meta.setText(f"{parts[1]} - ★{parts[2]}")
+            temp_title.setText(parts[0])
+        else:
+            temp_meta.setText("")
+            temp_title.setText(nm)
+    
+        # Set fixed width for text measurement (same as tile width minus margins)
+        text_width = total_width - 12
+        temp_title.setFixedWidth(text_width - 8)  # Account for layout margins
+    
+        temp_layout.addWidget(temp_meta)
+        temp_layout.addWidget(temp_title)
+    
+        # Force the layout to calculate its size
+        temp_widget.adjustSize()
+        needed_text_height = temp_widget.sizeHint().height()
+    
+        # Add generous padding to ensure text is never cut off
+        text_area_height = needed_text_height + 30  # Extra padding for safety
+    
+        # NOW set the total tile size with the measured text height
+        total_height = self.visible_h + text_area_height + outer_margin + 20  # Extra margin
         self.setFixedSize(total_width, total_height)
         self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
 
@@ -61,55 +109,43 @@ class Tile(QtWidgets.QFrame):
         self.holder.setGeometry(poster_x, poster_y, self.visible_w, self.visible_h)
         self.holder.setStyleSheet("background:#151515; border-radius:10px;")
 
-        # Shadow for poster (unchanged)
+        # Shadow for poster
         sh = QtWidgets.QGraphicsDropShadowEffect(self.holder)
         sh.setBlurRadius(18)
         sh.setOffset(0, 6)
         sh.setColor(QtGui.QColor(0, 0, 0, 200))
         self.holder.setGraphicsEffect(sh)
 
-        # Poster image label (unchanged)
+        # Poster image label
         self.img_lbl = QtWidgets.QLabel(self.holder)
         self.img_lbl.setGeometry(0, 0, self.visible_w, self.visible_h)
         self.img_lbl.setAlignment(QtCore.Qt.AlignCenter)
         self.img_lbl.setStyleSheet("border-radius:10px;")
         self.img_lbl.setScaledContents(False)
 
-        # TEXT AREA: Positioned BELOW poster with exact coordinates  
+        # TEXT AREA: Positioned BELOW poster with NO HEIGHT RESTRICTIONS
         text_x = 6
         text_y = poster_y + self.visible_h + 10  # 10 pixels below poster
-        text_width = total_width - 12  # Full width minus margins
-        
-        # Create text container - BUT DON'T SET FIXED HEIGHT YET
-        text_width = total_width - 12  # Full width minus margins
-        text_x = 6  # Left margin
-
-        # Create text container with initial position (we'll adjust height after measuring text)
+    
+        # Create the actual text container with the measured height
         self.text_container = QtWidgets.QWidget(self)
+        self.text_container.setGeometry(text_x, text_y, text_width, text_area_height)
         text_layout = QtWidgets.QVBoxLayout(self.text_container)
         text_layout.setContentsMargins(4, 0, 4, 0)
         text_layout.setSpacing(2)
 
-        # Meta line (unchanged styling)
+        # Create the actual labels (same as temp ones but these are the real ones)
         self.meta_line = QtWidgets.QLabel("")
-        meta_font_px = max(10, int(13 * self.font_scale))
         self.meta_line.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
         self.meta_line.setAlignment(QtCore.Qt.AlignCenter)
 
-        # REPLACE LinkButton with QLabel that supports proper word wrapping
-        title_pt = max(10, int(10 * self.font_scale))
         self.title_label = QtWidgets.QLabel("")
-        self.title_label.setWordWrap(True)  # Enable proper word wrapping
+        self.title_label.setWordWrap(True)
         self.title_label.setAlignment(QtCore.Qt.AlignCenter)
-
-        # Make the label clickable (to replace the button functionality)
         self.title_label.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.title_label.mouseReleaseEvent = lambda ev: self.clicked_open.emit(self.path)
 
-        # Style the title label to look like the old LinkButton
-        title_font = self.title_label.font()
-        title_font.setPointSize(int(title_pt))
-        title_font.setBold(True)
+        # Style the title label
         self.title_label.setFont(title_font)
         self.title_label.setStyleSheet("""
         QLabel {
@@ -124,34 +160,18 @@ class Tile(QtWidgets.QFrame):
         text_layout.addWidget(self.meta_line)
         text_layout.addWidget(self.title_label)
 
-        # Name parsing (unchanged)
-        nm = Path(self.path).name
-        parts = [p.strip() for p in nm.rsplit(" - ", 2)]
-
-        # Set the text content (no need for manual wrapping - QLabel handles it automatically)
+        # Set the final text content
         if len(parts) == 3:
             self.meta_line.setText(f"{parts[1]} - ★{parts[2]}")
-            self.title_label.setText(parts[0])  # No wrap_text needed!
+            self.title_label.setText(parts[0])
         else:
             self.meta_line.setText("")
-            self.title_label.setText(nm)  # No wrap_text needed!
+            self.title_label.setText(nm)
 
-        # Now calculate the actual space needed and resize the tile
-        self.text_container.adjustSize()  # Let the container find its natural size
-        actual_text_height = self.text_container.sizeHint().height()
+        # Clean up temporary widget
+        temp_widget.deleteLater()
 
-        # Ensure minimum height but allow expansion
-        final_text_height = max(text_area_height, actual_text_height + 10)  # +10 for padding
-
-        # Position and size the text container properly
-        text_y = poster_y + self.visible_h + 10  # 10 pixels below poster
-        self.text_container.setGeometry(text_x, text_y, text_width, final_text_height)
-
-        # Update the total tile height to accommodate the actual text
-        total_height = self.visible_h + final_text_height + outer_margin
-        self.setFixedSize(total_width, total_height)
-
-        # Default SVG or fallback background (unchanged)
+        # Default SVG or fallback background
         try:
             svgpm = utils.svg_to_pixmap(utils.FOLDER_SVG, max(self.visible_w, self.visible_h))
             if not svgpm.isNull():
@@ -171,7 +191,7 @@ class Tile(QtWidgets.QFrame):
             fb.fill(QtGui.QColor("#2b2b2b"))
             self.img_lbl.setPixmap(fb)
 
-        # Schedule thumbnail load (unchanged)
+        # Schedule thumbnail load
         if self.is_file and utils.is_image_file(self.path):
             ThumbnailLoader.instance().load(
                 self.path, self.native_w, self.native_h, self._on_thumb_ready
@@ -179,7 +199,7 @@ class Tile(QtWidgets.QFrame):
         elif not self.is_file:
             QtCore.QTimer.singleShot(0, self._start_media_scan)
 
-        # Build play icon pixmap (unchanged)
+        # Build play icon pixmap
         self.play_overlay = None
         try:
             play_pm = self._build_play_pixmap()
@@ -196,17 +216,17 @@ class Tile(QtWidgets.QFrame):
                 self.play_overlay.hide()
 
                 def _on_play(ev):
-                    if self.has_media:
+                    if ev.button() == QtCore.Qt.LeftButton:
                         self.clicked_play.emit(self.path)
 
                 self.play_overlay.mouseReleaseEvent = _on_play
         except Exception:
             self.play_overlay = None
 
-        # Clicking the poster opens (unchanged)
+        # Clicking the poster opens
         self.img_lbl.mouseReleaseEvent = lambda ev: self.clicked_open.emit(self.path)
 
-        # Shine overlay (unchanged)
+        # Shine overlay
         self.shine_overlay = QtWidgets.QFrame(self.holder)
         self.shine_overlay.setStyleSheet(
             """background: qlineargradient(
@@ -221,7 +241,7 @@ class Tile(QtWidgets.QFrame):
                                        self.visible_w * 2, self.visible_h * 2)
         self.shine_overlay.hide()
 
-        # Animations (unchanged)
+        # Animations
         self._shine_anim = QtCore.QPropertyAnimation(self.shine_overlay, b"pos", self)
         self._shine_anim.setDuration(200)
         self._shine_anim.setStartValue(QtCore.QPoint(self.visible_w, -self.visible_h))
