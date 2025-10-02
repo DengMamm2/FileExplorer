@@ -88,34 +88,9 @@ class Tile(QtWidgets.QFrame):
         temp_title.setFont(title_font)
     
         # Set the actual text content
-        nm = Path(self.path).name
-
-        # Look for year (4 digits) and rating (x.x format) at the end
-        import re
-        year_rating_pattern = r'(.+?)\s*-\s*(\d{4})\s*-\s*(\d+\.\d+)$'
-        year_only_pattern = r'(.+?)\s*-\s*(\d{4})$'
-        rating_only_pattern = r'(.+?)\s*-\s*(\d+\.\d+)$'
-
-        match_both = re.match(year_rating_pattern, nm)
-        match_year = re.match(year_only_pattern, nm)
-        match_rating = re.match(rating_only_pattern, nm)
-
-        if match_both:
-            title = match_both.group(1).strip()
-            year = match_both.group(2)
-            rating = match_both.group(3)
-            temp_meta.setText(f"{year} - ★{rating}")
-            temp_title.setText(title)
-        elif match_year:
-            title = match_year.group(1).strip()
-            year = match_year.group(2)
-            temp_meta.setText(year)
-            temp_title.setText(title)
-        elif match_rating:
-            title = match_rating.group(1).strip()
-            rating = match_rating.group(2)
-            temp_meta.setText(f"★{rating}")
-            temp_title.setText(title)
+        if len(parts) == 3:
+            temp_meta.setText(f"{parts[1]} - ★{parts[2]}")
+            temp_title.setText(parts[0])
         else:
             temp_meta.setText("")
             temp_title.setText(nm)
@@ -198,34 +173,9 @@ class Tile(QtWidgets.QFrame):
         text_layout.addWidget(self.title_label)
 
         # Set the final text content
-        nm = Path(self.path).name
-
-        # Look for year (4 digits) and rating (x.x format) at the end
-        import re
-        year_rating_pattern = r'(.+?)\s*-\s*(\d{4})\s*-\s*(\d+\.\d+)$'
-        year_only_pattern = r'(.+?)\s*-\s*(\d{4})$'
-        rating_only_pattern = r'(.+?)\s*-\s*(\d+\.\d+)$'
-
-        match_both = re.match(year_rating_pattern, nm)
-        match_year = re.match(year_only_pattern, nm)
-        match_rating = re.match(rating_only_pattern, nm)
-
-        if match_both:
-            title = match_both.group(1).strip()
-            year = match_both.group(2)
-            rating = match_both.group(3)
-            self.meta_line.setText(f"{year} - ★{rating}")
-            self.title_label.setText(title)
-        elif match_year:
-            title = match_year.group(1).strip()
-            year = match_year.group(2)
-            self.meta_line.setText(year)
-            self.title_label.setText(title)
-        elif match_rating:
-            title = match_rating.group(1).strip()
-            rating = match_rating.group(2)
-            self.meta_line.setText(f"★{rating}")
-            self.title_label.setText(title)
+        if len(parts) == 3:
+            self.meta_line.setText(f"{parts[1]} - ★{parts[2]}")
+            self.title_label.setText(parts[0])
         else:
             self.meta_line.setText("")
             self.title_label.setText(nm)
