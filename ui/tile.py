@@ -80,56 +80,76 @@ class Tile(QtWidgets.QFrame):
         text_y = poster_y + self.visible_h + 10  # 10 pixels below poster
         text_width = total_width - 12  # Full width minus margins
         
-        # Create text container at exact position
+        # Create text container - BUT DON'T SET FIXED HEIGHT YET
+        text_width = total_width - 12  # Full width minus margins
+        text_x = 6  # Left margin
+
+        # Create text container with initial position (we'll adjust height after measuring text)
         self.text_container = QtWidgets.QWidget(self)
-        self.text_container.setGeometry(text_x, text_y, text_width, text_area_height)
-        
-        # Text layout within the container
         text_layout = QtWidgets.QVBoxLayout(self.text_container)
         text_layout.setContentsMargins(4, 0, 4, 0)
         text_layout.setSpacing(2)
-        
-        # Meta line and title (unchanged styling)
+
+        # Meta line (unchanged styling)
         self.meta_line = QtWidgets.QLabel("")
         meta_font_px = max(10, int(13 * self.font_scale))
         self.meta_line.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
-        
+        self.meta_line.setAlignment(QtCore.Qt.AlignCenter)
+
+        # REPLACE LinkButton with QLabel that supports proper word wrapping
         title_pt = max(10, int(10 * self.font_scale))
-        self.title_btn = LinkButton("", parent=self.text_container, pt=title_pt)
-        self.title_btn.clicked.connect(lambda: self.clicked_open.emit(self.path))
-        
+        self.title_label = QtWidgets.QLabel("")
+        self.title_label.setWordWrap(True)  # Enable proper word wrapping
+        self.title_label.setAlignment(QtCore.Qt.AlignCenter)
+
+        # Make the label clickable (to replace the button functionality)
+        self.title_label.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.title_label.mouseReleaseEvent = lambda ev: self.clicked_open.emit(self.path)
+
+        # Style the title label to look like the old LinkButton
+        title_font = self.title_label.font()
+        title_font.setPointSize(int(title_pt))
+        title_font.setBold(True)
+        self.title_label.setFont(title_font)
+        self.title_label.setStyleSheet("""
+        QLabel {
+            color: #ddd;
+            border: none;
+        }
+        QLabel:hover {
+            color: white;
+        }
+        """)
+
         text_layout.addWidget(self.meta_line)
-        text_layout.addWidget(self.title_btn)
+        text_layout.addWidget(self.title_label)
 
         # Name parsing (unchanged)
         nm = Path(self.path).name
         parts = [p.strip() for p in nm.rsplit(" - ", 2)]
 
-        def wrap_text(text, max_chars=18):
-            if len(text) <= max_chars:
-                return text
-            words = text.split(' ')
-            lines = []
-            line = ""
-            for word in words:
-                if len(line) + len(word) + 1 <= max_chars:
-                    if line:
-                        line += " "
-                    line += word
-                else:
-                    if line:
-                        lines.append(line)
-                    line = word
-            if line:
-                lines.append(line)
-            return '\n'.join(lines)
-
+        # Set the text content (no need for manual wrapping - QLabel handles it automatically)
         if len(parts) == 3:
             self.meta_line.setText(f"{parts[1]} - ★{parts[2]}")
-            self.title_btn.setText(wrap_text(parts[0]))
+            self.title_label.setText(parts[0])  # No wrap_text needed!
         else:
             self.meta_line.setText("")
-            self.title_btn.setText(wrap_text(nm))
+            self.title_label.setText(nm)  # No wrap_text needed!
+
+        # Now calculate the actual space needed and resize the tile
+        self.text_container.adjustSize()  # Let the container find its natural size
+        actual_text_height = self.text_container.sizeHint().height()
+
+        # Ensure minimum height but allow expansion
+        final_text_height = max(text_area_height, actual_text_height + 10)  # +10 for padding
+
+        # Position and size the text container properly
+        text_y = poster_y + self.visible_h + 10  # 10 pixels below poster
+        self.text_container.setGeometry(text_x, text_y, text_width, final_text_height)
+
+        # Update the total tile height to accommodate the actual text
+        total_height = self.visible_h + final_text_height + outer_margin
+        self.setFixedSize(total_width, total_height)
 
         # Default SVG or fallback background (unchanged)
         try:
