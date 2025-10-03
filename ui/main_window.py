@@ -162,7 +162,11 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception:
             pass
         self.search.setStyleSheet('QLineEdit { background: white; color: black; border-radius: 12px; padding-left:10px; font-size:14px; }')
-        self.search.textChanged.connect(self.on_search)
+        # Add search delay timer
+        self.search_timer = QtCore.QTimer()
+        self.search_timer.setSingleShot(True)
+        self.search_timer.timeout.connect(self.on_search_delayed)
+        self.search.textChanged.connect(self.on_search_input)
 
         # put the search in the center column
         top_layout.addWidget(self.search, 0, 1, alignment=QtCore.Qt.AlignCenter)
@@ -473,7 +477,17 @@ class MainWindow(QtWidgets.QMainWindow):
             btn.clicked.connect(partial(self.populate_path, str(accum).replace('\\', '/')))
             self.breadcrumb_layout.addWidget(btn)
 
-    def on_search(self, text):
+    def on_search_input(self, text):
+        """Called immediately when text changes - just restart the timer"""
+        self.search_timer.stop()
+        if text.strip():
+            self.search_timer.start(500)  # Wait 500ms after user stops typing
+        else:
+            self.on_search_delayed()  # Clear immediately when empty
+
+    def on_search_delayed(self):
+        """Called after user stops typing for 500ms"""
+        text = self.search.text()
         q = text.strip().lower()
         if not q:
             if self.history and self.history_index >= 0:
@@ -525,7 +539,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     c = 0
                     r += 1
             try:
-                # Try to count the results in the grid
                 count = self.grid_layout.count()
                 self.item_count_label.setText(f"Items: {count}")
             except Exception:

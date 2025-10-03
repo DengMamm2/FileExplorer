@@ -78,7 +78,7 @@ class Tile(QtWidgets.QFrame):
         temp_meta.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
         temp_meta.setAlignment(QtCore.Qt.AlignCenter)
     
-        title_pt = max(10, int(10 * self.font_scale))
+        title_pt = max(8, int(8 * self.font_scale))
         temp_title = QtWidgets.QLabel("")
         temp_title.setWordWrap(True)
         temp_title.setAlignment(QtCore.Qt.AlignCenter)
@@ -173,7 +173,7 @@ class Tile(QtWidgets.QFrame):
 
         # Create the actual labels (same as temp ones but these are the real ones)
         self.meta_line = QtWidgets.QLabel("")
-        self.meta_line.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
+        self.meta_line.setStyleSheet(f"color: #707070; font-size:{meta_font_px}px;")
         self.meta_line.setAlignment(QtCore.Qt.AlignCenter)
 
         self.title_label = QtWidgets.QLabel("")
