@@ -144,20 +144,21 @@ class Tile(QtWidgets.QFrame):
         poster_x = (total_width - self.visible_w) // 2  # Center horizontally
         poster_y = 6  # Top margin
         self.holder.setGeometry(poster_x, poster_y, self.visible_w, self.visible_h)
-        self.holder.setStyleSheet("background: transparent; border: none;")
+        self.holder.setStyleSheet("background:#151515; border-radius:10px;")
+
+        # Shadow for poster
+        sh = QtWidgets.QGraphicsDropShadowEffect(self.holder)
+        sh.setBlurRadius(18)
+        sh.setOffset(0, 6)
+        sh.setColor(QtGui.QColor(0, 0, 0, 200))
+        self.holder.setGraphicsEffect(sh)
 
         # Poster image label
         self.img_lbl = QtWidgets.QLabel(self.holder)
         self.img_lbl.setGeometry(0, 0, self.visible_w, self.visible_h)
         self.img_lbl.setAlignment(QtCore.Qt.AlignCenter)
-        self.img_lbl.setStyleSheet("")
+        self.img_lbl.setStyleSheet("border-radius:10px;")
         self.img_lbl.setScaledContents(False)
-        # Apply shadow to poster image
-        sh = QtWidgets.QGraphicsDropShadowEffect(self.img_lbl)
-        sh.setBlurRadius(18)
-        sh.setOffset(0, 6)
-        sh.setColor(QtGui.QColor(0, 0, 0, 200))
-        self.img_lbl.setGraphicsEffect(sh)
 
         # TEXT AREA: Positioned BELOW poster with NO HEIGHT RESTRICTIONS
         text_x = 6
@@ -370,17 +371,15 @@ class Tile(QtWidgets.QFrame):
         try:
             cached = utils.cache_get(path, self.visible_w, self.visible_h)
             if cached:
-                constrained = self._apply_width_constraint_and_corners(cached)
-                self.img_lbl.setPixmap(constrained)
+                self.img_lbl.setPixmap(cached)
                 return
 
             if qimg is None or qimg.isNull():
                 return
 
             out = utils.compose_centered_from_qimage(qimg, self.visible_w, self.visible_h)
-            constrained = self._apply_width_constraint_and_corners(out)
-            utils.cache_set(path, self.visible_w, self.visible_h, constrained)
-            self.img_lbl.setPixmap(constrained)
+            utils.cache_set(path, self.visible_w, self.visible_h, out)
+            self.img_lbl.setPixmap(out)
         except Exception:
             traceback.print_exc()
 
