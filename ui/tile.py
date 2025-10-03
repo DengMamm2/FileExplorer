@@ -144,7 +144,7 @@ class Tile(QtWidgets.QFrame):
         poster_x = (total_width - self.visible_w) // 2  # Center horizontally
         poster_y = 6  # Top margin
         self.holder.setGeometry(poster_x, poster_y, self.visible_w, self.visible_h)
-        self.holder.setStyleSheet("background:#151515; border-radius:10px;")
+        self.holder.setStyleSheet("background:transparent; border-radius:10px;")
 
         # Shadow for poster
         sh = QtWidgets.QGraphicsDropShadowEffect(self.holder)
