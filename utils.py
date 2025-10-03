@@ -131,18 +131,32 @@ def compose_centered(src_pm: QtGui.QPixmap, target_w: int, target_h: int) -> QtG
         out = QtGui.QPixmap(target_w, target_h)
         out.fill(QtCore.Qt.transparent)
         return out
-    sw, sh = src_pm.width(), src_pm.height()
-    if sw > target_w or sh > target_h:
-        scaled = src_pm.scaled(target_w, target_h, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
-    else:
-        scaled = src_pm
+    
+    # Scale to fill the entire target area (stretch to fit)
+    scaled = src_pm.scaled(target_w, target_h, QtCore.Qt.IgnoreAspectRatio, QtCore.Qt.SmoothTransformation)
+    
+    # Create output pixmap
     out = QtGui.QPixmap(target_w, target_h)
     out.fill(QtCore.Qt.transparent)
+    
+    # Create rounded mask
+    mask = QtGui.QBitmap(target_w, target_h)
+    mask.fill(QtCore.Qt.color0)
+    mask_painter = QtGui.QPainter(mask)
+    mask_painter.setRenderHint(QtGui.QPainter.Antialiasing)
+    mask_painter.setBrush(QtGui.QBrush(QtCore.Qt.color1))
+    mask_painter.setPen(QtCore.Qt.NoPen)
+    mask_painter.drawRoundedRect(0, 0, target_w, target_h, 10, 10)
+    mask_painter.end()
+    
+    # Draw the scaled image to fill entire area
     p = QtGui.QPainter(out)
-    x = (target_w - scaled.width()) // 2
-    y = (target_h - scaled.height()) // 2
-    p.drawPixmap(x, y, scaled)
+    p.setRenderHint(QtGui.QPainter.Antialiasing)
+    p.drawPixmap(0, 0, scaled)
     p.end()
+    
+    # Apply the rounded mask to the final result
+    out.setMask(mask)
     return out
 
 
