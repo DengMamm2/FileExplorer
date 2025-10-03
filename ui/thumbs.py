@@ -22,16 +22,11 @@ class ThumbJob(QtCore.QRunnable):
     def run(self):
         start_time = time.time()
         try:
-            print(f"[TIMING] {self.path} - ThumbJob.run started at {start_time:.3f}")
             img = QtGui.QImage(self.path)
             if img.isNull():
-                print(f"[TIMING] {self.path} - Failed to load image in {time.time()-start_time:.3f} sec")
                 self.signals.finished.emit(self.path, QtGui.QImage())
-                print(f"[TIMING] {self.path} - ThumbJob.run finished (fail) in {time.time()-start_time:.3f} sec")
                 return
-            print(f"[TIMING] {self.path} - Loaded original image in {time.time()-start_time:.3f} sec")
             self.signals.finished.emit(self.path, img)
-            print(f"[TIMING] {self.path} - ThumbJob.run finished (no resize, no cache) in {time.time()-start_time:.3f} sec")
         except Exception:
             try:
                 self.signals.finished.emit(self.path, QtGui.QImage())

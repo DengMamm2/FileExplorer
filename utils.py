@@ -61,7 +61,6 @@ def read_first_dpl_basename(path: str) -> Optional[str]:
                     filename = filename.replace('\\', '/')
                     return os.path.basename(filename)
     except Exception as e:
-        print(f"[read_first_dpl_basename] Failed to read {path}: {e}")
         return None
     return None
 

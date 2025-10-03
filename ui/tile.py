@@ -288,35 +288,6 @@ class Tile(QtWidgets.QFrame):
         # Clicking the poster opens
         self.img_lbl.mouseReleaseEvent = lambda ev: self.clicked_open.emit(self.path)
 
-        # Shine overlay
-        self.shine_overlay = QtWidgets.QFrame(self.holder)
-        self.shine_overlay.setStyleSheet(
-            """background: qlineargradient(
-                x1:1, y1:0, x2:0, y2:1,
-                stop:0 rgba(255,255,255,0),
-                stop:0.5 rgba(255,255,255,80),
-                stop:1 rgba(255,255,255,0)
-            );
-            border-radius:10px;"""
-        )
-        self.shine_overlay.setGeometry(-self.visible_w, -self.visible_h,
-                                       self.visible_w * 2, self.visible_h * 2)
-        self.shine_overlay.hide()
-
-        # Animations
-        self._shine_anim = QtCore.QPropertyAnimation(self.shine_overlay, b"pos", self)
-        self._shine_anim.setDuration(200)
-        self._shine_anim.setStartValue(QtCore.QPoint(self.visible_w, -self.visible_h))
-        self._shine_anim.setEndValue(QtCore.QPoint(-self.visible_w, self.visible_h))
-        self._shine_anim.setLoopCount(1)
-        self._shine_anim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
-
-        self._hover_anim = QtCore.QPropertyAnimation(self.holder, b"geometry", self)
-        self._hover_anim.setDuration(150)
-        self._hover_anim.setEasingCurve(QtCore.QEasingCurve.InOutQuad)
-
-        self.setAttribute(QtCore.Qt.WA_Hover, True)
-
     # ALL METHODS BELOW ARE UNCHANGED
     def _start_media_scan(self):
         """Start a MediaScanner QRunnable (kept as worker in workers/media_scanner.py)."""
@@ -412,37 +383,3 @@ class Tile(QtWidgets.QFrame):
             return scaled
         except Exception:
             return None
-
-    def enterEvent(self, ev):
-        super().enterEvent(ev)
-        if self.has_media and self.play_overlay:
-            self.play_overlay.show()
-            self.play_overlay.raise_()
-
-        self.shine_overlay.show()
-        self._shine_anim.stop()
-        self._shine_anim.start()
-
-        self._hover_anim.stop()
-        rect = self.holder.geometry()
-        bigger = QtCore.QRect(
-            int(rect.x() - rect.width() * 0.025),
-            int(rect.y() - rect.height() * 0.025),
-            int(rect.width() * 1.05),
-            int(rect.height() * 1.05),
-        )
-        self._hover_anim.setStartValue(rect)
-        self._hover_anim.setEndValue(bigger)
-        self._hover_anim.start()
-
-    def leaveEvent(self, ev):
-        super().leaveEvent(ev)
-        if self.play_overlay:
-            self.play_overlay.hide()
-        self.shine_overlay.hide()
-
-        self._hover_anim.stop()
-        self._hover_anim.setEndValue(QtCore.QRect(
-            (self.width() - self.visible_w) // 2, 6, self.visible_w, self.visible_h
-        ))
-        self._hover_anim.start()

@@ -20,14 +20,9 @@ def cache_path_for(source_path: str, w: int, h: int) -> Path:
 
 def cache_get(path, w, h):
     key = (str(path), int(w), int(h))
-    if key in PX_CACHE:
-        print(f"[TIMING] cache_get: HIT for {key} at {time.time():.3f}")
-    else:
-        print(f"[TIMING] cache_get: MISS for {key} at {time.time():.3f}")
     return PX_CACHE.get(key)
 
 def cache_set(path, w, h, pix: QtGui.QPixmap):
     key = (str(path), int(w), int(h))
     PX_CACHE[key] = pix
-    print(f"[TIMING] cache_set: SET for {key} at {time.time():.3f}")
 

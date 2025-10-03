@@ -39,7 +39,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.quick = load_json(config.QUICK_FILE, [])
         self.threadpool = QtCore.QThreadPool.globalInstance()
         self.threadpool.setMaxThreadCount(16)
-        print(f"[TIMING] Thumbnail thread pool max thread count set to {self.threadpool.maxThreadCount()}")
         self.history = []
         self.history_index = -1
         self.current_path = ''
@@ -60,7 +59,6 @@ class MainWindow(QtWidgets.QMainWindow):
         raw_tile_w = max(1, screen_w // 8)
         self.tile_w = min(self.base_w, raw_tile_w)
         self.tile_h = max(1, int(self.tile_w * (self.base_h / self.base_w)))
-        print(f"DEBUG: screen_w={screen_w}, raw_tile_w={raw_tile_w}, base_w={self.base_w}, tile_w={self.tile_w}, tile_h={self.tile_h}, dpr={self.dpr}")
 
 
         # apply palette
@@ -320,7 +318,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 w.deleteLater()
 
     def populate_home(self):
-        print("POPULATE_PATH:", Path)
         """
         Populate quick-access tiles using precomputed tile display size and ALWAYS 8 columns.
         Tile sizes were computed once at startup (self.tile_w / self.tile_h). Window resize
@@ -606,10 +603,9 @@ class MainWindow(QtWidgets.QMainWindow):
             try:
                 result = move_poster(folder_path, posters_root)
                 if result:
-                    print(f"Moved poster for {folder_path} to {result}")
                     moved_count += 1
             except Exception as e:
-                print(f"Error moving poster for {folder_path}: {e}")
+                    pass
 
         for idx, folder_path in enumerate(folders_to_process):
             process_folder(folder_path)

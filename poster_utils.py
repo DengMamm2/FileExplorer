@@ -3,8 +3,10 @@ import hashlib
 import shutil
 
 def get_folder_hash(folder_path):
-    # Create a SHA1 hash of the folder path
-    return hashlib.sha1(folder_path.encode('utf-8')).hexdigest()
+    # Normalize the path to ensure consistent hashing regardless of slash direction
+    normalized_path = str(folder_path).replace('\\', '/')
+    # Create a SHA1 hash of the normalized folder path
+    return hashlib.sha1(normalized_path.encode('utf-8')).hexdigest()
 
 def get_new_poster_path(folder_path, posters_root="posters"):
     h = get_folder_hash(folder_path)
