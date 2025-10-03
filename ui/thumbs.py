@@ -40,6 +40,7 @@ class ThumbnailLoader(QtCore.QObject):
         self.pool = QtCore.QThreadPool.globalInstance()
         QtCore.QThreadPool.globalInstance().setMaxThreadCount(16)
         self.pending = {}
+        self.pending_lock = QtCore.QMutex()
 
     @classmethod
     def instance(cls):
@@ -52,17 +53,27 @@ class ThumbnailLoader(QtCore.QObject):
         if cache_utils.cache_get(path, target_w, target_h):
             QtCore.QTimer.singleShot(0, lambda: cb(path, None))
             return
-        if path in self.pending:
-            self.pending[path].append(cb)
-            return
-        self.pending[path] = [cb]
+    
+        self.pending_lock.lock()
+        try:
+            if path in self.pending:
+                self.pending[path].append(cb)
+                return
+            self.pending[path] = [cb]
+        finally:
+            self.pending_lock.unlock()
+    
         job = ThumbJob(path, target_w, target_h)
         job.signals.finished.connect(self._on_finished)
-        print(f"[TIMING] Queuing thumbnail job for {path} at {time.time():.3f}")
         self.pool.start(job)
 
     def _on_finished(self, path: str, qimg: QtGui.QImage):
-        cbs = self.pending.pop(str(path), [])
+        self.pending_lock.lock()
+        try:
+            cbs = self.pending.pop(str(path), [])
+        finally:
+            self.pending_lock.unlock()
+    
         for cb in cbs:
             try:
                 cb(path, qimg)
