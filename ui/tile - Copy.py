@@ -159,15 +159,6 @@ class Tile(QtWidgets.QFrame):
         self.img_lbl.setAlignment(QtCore.Qt.AlignCenter)
         self.img_lbl.setStyleSheet("border-radius:10px;")
         self.img_lbl.setScaledContents(False)
-        # --- DARKEN ON HOVER START ---
-        self.overlay_lbl = QtWidgets.QLabel(self.holder)
-        self.overlay_lbl.setGeometry(0, 0, self.visible_w, self.visible_h)
-        self.overlay_lbl.setStyleSheet(
-            "background-color: rgba(0, 0, 0, 0); border-radius:10px;"
-        )
-        self.overlay_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-        self.overlay_lbl.hide()
-        self.img_lbl.installEventFilter(self)
 
         # TEXT AREA: Positioned BELOW poster with NO HEIGHT RESTRICTIONS
         text_x = 6
@@ -392,16 +383,3 @@ class Tile(QtWidgets.QFrame):
             return scaled
         except Exception:
             return None
-
-    # --- DARK OVERLAY ON HOVER LOGIC ---
-    def eventFilter(self, obj, event):
-        if obj == self.img_lbl:
-            if event.type() == QtCore.QEvent.Enter:
-                # Show overlay, 25% darker
-                self.overlay_lbl.setStyleSheet(
-                    "background-color: rgba(0, 0, 0, 128); border-radius:10px;"
-                )  # 64/255 ≈ 25% opacity
-                self.overlay_lbl.show()
-            elif event.type() == QtCore.QEvent.Leave:
-                self.overlay_lbl.hide()
-        return super().eventFilter(obj, event)
