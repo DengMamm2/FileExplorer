@@ -56,7 +56,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.native_h = max(1, int(self.base_h * self.dpr))
         # Safe font scale calculation - prevent crashes from extreme values
         raw_font_scale = screen.logicalDotsPerInch() / 96.0 if screen else 1.0
-        self.font_scale = max(0.5, min(3.0, raw_font_scale))  # Clamp between 0.5 and 3.0
+        self.font_scale = max(0.1, raw_font_scale)  # Only prevent extremely small values
 
         screen_w = screen.size().width() if screen else 1920
         raw_tile_w = max(1, screen_w // 8)

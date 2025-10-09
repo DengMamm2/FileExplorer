@@ -1,5 +1,6 @@
 # ui/tile.py
 import os
+import ui_settings
 import traceback
 from pathlib import Path
 from typing import Optional
@@ -45,7 +46,7 @@ class Tile(QtWidgets.QFrame):
         self._media_scan_done = False
 
         # COMPLETELY DYNAMIC APPROACH: NO HEIGHT RESTRICTIONS WHATSOEVER
-        outer_margin = 12
+        outer_margin = ui_settings.OUTER_MARGIN
     
         # Start with just the poster size - we'll expand as needed
         total_width = self.visible_w + outer_margin
@@ -73,12 +74,12 @@ class Tile(QtWidgets.QFrame):
             parts = [nm]
     
         # Create temporary labels to measure text size
-        meta_font_px = max(8, min(24, int(13 * self.font_scale)))
+        meta_font_px = max(8, min(24, int(ui_settings.META_FONT_SIZE * self.font_scale)))
         temp_meta = QtWidgets.QLabel("")
         temp_meta.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
         temp_meta.setAlignment(QtCore.Qt.AlignCenter)
     
-        title_pt = max(6, min(20, int(8 * self.font_scale)))
+        title_pt = max(6, min(20, int(ui_settings.TITLE_FONT_SIZE * self.font_scale)))
         temp_title = QtWidgets.QLabel("")
         temp_title.setWordWrap(True)
         temp_title.setAlignment(QtCore.Qt.AlignCenter)
@@ -137,10 +138,10 @@ class Tile(QtWidgets.QFrame):
             needed_text_height = 50  # Safe fallback if measurement fails
     
         # Add generous padding to ensure text is never cut off
-        text_area_height = needed_text_height + 30  # Extra padding for safety
+        text_area_height = needed_text_height + ui_settings.TEXT_PADDING
     
         # NOW set the total tile size with the measured text height
-        total_height = self.visible_h + text_area_height + outer_margin + 20  # Extra margin
+        total_height = self.visible_h + text_area_height + outer_margin + ui_settings.EXTRA_MARGIN
         self.setFixedSize(total_width, total_height)
         self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
 
@@ -182,8 +183,8 @@ class Tile(QtWidgets.QFrame):
         self.text_container = QtWidgets.QWidget(self)
         self.text_container.setGeometry(text_x, text_y, text_width, text_area_height)
         text_layout = QtWidgets.QVBoxLayout(self.text_container)
-        text_layout.setContentsMargins(4, 0, 4, 0)
-        text_layout.setSpacing(2)
+        text_layout.setContentsMargins(ui_settings.TEXT_MARGIN_LEFT, 0, ui_settings.TEXT_MARGIN_RIGHT, 0)
+        text_layout.setSpacing(ui_settings.TEXT_SPACING)
 
         # Create the actual labels (same as temp ones but these are the real ones)
         self.meta_line = QtWidgets.QLabel("")
