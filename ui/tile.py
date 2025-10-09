@@ -74,17 +74,17 @@ class Tile(QtWidgets.QFrame):
             parts = [nm]
     
         # Create temporary labels to measure text size
-        meta_font_px = max(8, min(24, int(ui_settings.META_FONT_SIZE * self.font_scale)))
+        meta_font_px = max(8, min(32, int(ui_settings.META_FONT_SIZE * self.font_scale)))
         temp_meta = QtWidgets.QLabel("")
         temp_meta.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
         temp_meta.setAlignment(QtCore.Qt.AlignCenter)
-    
-        title_pt = max(6, min(20, int(ui_settings.TITLE_FONT_SIZE * self.font_scale)))
+
+        title_font_px = max(8, min(32, int(ui_settings.TITLE_FONT_SIZE * self.font_scale)))
         temp_title = QtWidgets.QLabel("")
         temp_title.setWordWrap(True)
         temp_title.setAlignment(QtCore.Qt.AlignCenter)
+        temp_title.setStyleSheet(f"font-size:{title_font_px}px; color: white;")
         title_font = temp_title.font()
-        title_font.setPointSize(int(title_pt))
         title_font.setBold(True)
         temp_title.setFont(title_font)
     
@@ -198,15 +198,15 @@ class Tile(QtWidgets.QFrame):
         self.title_label.mouseReleaseEvent = lambda ev: self.clicked_open.emit(self.path)
 
         # Style the title label
-        self.title_label.setFont(title_font)
-        self.title_label.setStyleSheet("""
-        QLabel {
+        self.title_label.setStyleSheet(f"""
+        QLabel {{
             color: #ddd;
             border: none;
-        }
-        QLabel:hover {
+            font-size: {title_font_px}px;
+        }}
+        QLabel:hover {{
             color: white;
-        }
+        }}
         """)
 
         text_layout.addWidget(self.meta_line)
