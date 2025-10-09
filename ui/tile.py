@@ -73,12 +73,12 @@ class Tile(QtWidgets.QFrame):
             parts = [nm]
     
         # Create temporary labels to measure text size
-        meta_font_px = max(10, int(13 * self.font_scale))
+        meta_font_px = max(8, min(24, int(13 * self.font_scale)))
         temp_meta = QtWidgets.QLabel("")
         temp_meta.setStyleSheet(f"color: rgba(200,200,200,0.95); font-size:{meta_font_px}px;")
         temp_meta.setAlignment(QtCore.Qt.AlignCenter)
     
-        title_pt = max(8, int(8 * self.font_scale))
+        title_pt = max(6, min(20, int(8 * self.font_scale)))
         temp_title = QtWidgets.QLabel("")
         temp_title.setWordWrap(True)
         temp_title.setAlignment(QtCore.Qt.AlignCenter)
@@ -127,9 +127,14 @@ class Tile(QtWidgets.QFrame):
         temp_layout.addWidget(temp_meta)
         temp_layout.addWidget(temp_title)
     
-        # Force the layout to calculate its size
-        temp_widget.adjustSize()
-        needed_text_height = temp_widget.sizeHint().height()
+        # Force the layout to calculate its size - with error handling
+        try:
+            temp_widget.adjustSize()
+            needed_text_height = temp_widget.sizeHint().height()
+            if needed_text_height <= 0 or needed_text_height > 200:
+                needed_text_height = 50  # Safe fallback
+        except Exception:
+            needed_text_height = 50  # Safe fallback if measurement fails
     
         # Add generous padding to ensure text is never cut off
         text_area_height = needed_text_height + 30  # Extra padding for safety

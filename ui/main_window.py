@@ -1,5 +1,6 @@
 # ui/main_window.py
 import os
+import ui_settings
 from pathlib import Path
 from functools import partial
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -53,7 +54,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.dpr = 1.0
         self.native_w = max(1, int(self.base_w * self.dpr))
         self.native_h = max(1, int(self.base_h * self.dpr))
-        self.font_scale = screen.logicalDotsPerInch() / 96.0 if screen else 1.0
+        # Safe font scale calculation - prevent crashes from extreme values
+        raw_font_scale = screen.logicalDotsPerInch() / 96.0 if screen else 1.0
+        self.font_scale = max(0.5, min(3.0, raw_font_scale))  # Clamp between 0.5 and 3.0
 
         screen_w = screen.size().width() if screen else 1920
         raw_tile_w = max(1, screen_w // 8)
@@ -189,7 +192,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.scroll.setWidgetResizable(True)
         # Make scrolling faster
         self.scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
-        self.scroll.verticalScrollBar().setSingleStep(40)  # Increase from default (usually around 20)
+        self.scroll.verticalScrollBar().setSingleStep(ui_settings.SCROLL_SPEED)
 
         # wrapper to center the grid_container
         self.scroll_wrapper = QtWidgets.QWidget()
@@ -330,7 +333,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         r = c = 0
         for p in self.quick:
-            if not os.path.isdir(p):
+            try:
+                if not os.path.isdir(p):
+                    continue
+            except:
                 continue
             # Use computed display size + native request size for thumbs
             tile = self._Tile(p, self.tile_w, self.tile_h, self.native_w, self.native_h, self.font_scale, is_file=False)

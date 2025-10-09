@@ -131,8 +131,48 @@ def compose_centered(src_pm: QtGui.QPixmap, target_w: int, target_h: int) -> QtG
         out.fill(QtCore.Qt.transparent)
         return out
     
-    # Scale to fill the entire target area (stretch to fit)
-    scaled = src_pm.scaled(target_w, target_h, QtCore.Qt.IgnoreAspectRatio, QtCore.Qt.SmoothTransformation)
+    # Scale to exact height (540px), maintain aspect ratio
+    src_w, src_h = src_pm.width(), src_pm.height()
+    scale_factor = target_h / src_h
+    new_w = int(src_w * scale_factor)
+    new_h = target_h
+    
+    # Scale the image to the calculated size
+    scaled = src_pm.scaled(new_w, new_h, QtCore.Qt.IgnoreAspectRatio, QtCore.Qt.SmoothTransformation)
+    
+    # Create output pixmap
+    out = QtGui.QPixmap(target_w, target_h)
+    out.fill(QtCore.Qt.transparent)
+    
+    # Create rounded mask
+    mask = QtGui.QBitmap(target_w, target_h)
+    mask.fill(QtCore.Qt.color0)
+    mask_painter = QtGui.QPainter(mask)
+    mask_painter.setRenderHint(QtGui.QPainter.Antialiasing)
+    mask_painter.setBrush(QtGui.QBrush(QtCore.Qt.color1))
+    mask_painter.setPen(QtCore.Qt.NoPen)
+    mask_painter.drawRoundedRect(0, 0, target_w, target_h, 10, 10)
+    mask_painter.end()
+    
+    # Draw the scaled image, cropping if wider than target width
+    p = QtGui.QPainter(out)
+    p.setRenderHint(QtGui.QPainter.Antialiasing)
+    
+    if new_w <= target_w:
+        # Image is narrower or equal to target width - center it
+        x_offset = (target_w - new_w) // 2
+        p.drawPixmap(x_offset, 0, scaled)
+    else:
+        # Image is wider than target width - crop it by centering the crop
+        x_crop = (new_w - target_w) // 2
+        source_rect = QtCore.QRect(x_crop, 0, target_w, target_h)
+        p.drawPixmap(0, 0, target_w, target_h, scaled, x_crop, 0, target_w, target_h)
+    
+    p.end()
+    
+    # Apply the rounded mask to the final result
+    out.setMask(mask)
+    return out
     
     # Create output pixmap
     out = QtGui.QPixmap(target_w, target_h)

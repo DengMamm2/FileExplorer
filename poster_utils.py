@@ -17,7 +17,7 @@ def get_new_poster_path(folder_path, posters_root="posters"):
     return os.path.join(poster_dir, f"{h}.jpg")
 
 def move_poster(folder_path, posters_root="posters"):
-    src = os.path.join(folder_path, "poster.jpg")
+    src = os.path.join(folder_path, "data", "poster.jpg")
     if os.path.exists(src):
         dest = get_new_poster_path(folder_path, posters_root)
         
